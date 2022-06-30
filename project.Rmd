@@ -1,0 +1,153 @@
+---
+title: "Power of Visualisations in R"
+author: "Team CDMA"
+date: '2022-06-30'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Power of Visualisations in R
+
+Demonstrated through three projects
+
+### Load Libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+library(igraph)
+library(networkD3)
+library(visNetwork)
+library(tidytext) #install.packages("tidytext")
+library(wordcloud) #install.packages("wordcloud")
+```
+
+
+## 1. Network Analysis and Visualisation
+
+Explain Data
+
+- Unique IE Code
+- Other Identification attributes, such as
+  + Mobile number
+  + E-mail
+  + PAN Number
+  
+  
+Code Explanation: Steps-
+
+1. Load data.  
+2. Convert all attributes to tidy format, using `tidyr::pivot_longer()`
+3. Convert it to graph object, using `igraph` library.
+4. Add attributes(color and shape) for each node
+5. Plot interactive plot using `visNetwork` library.
+
+
+```{r}
+IEC_data <- read_csv('sample_data.csv')
+```
+
+Preview the data
+```{r}
+knitr::kable(IEC_data)
+```
+
+Performing network analysis
+
+```{r}
+#Change in long format
+IEC_data %>% 
+  mutate(across(everything(), as.character)) %>% 
+  pivot_longer(!IE_code, 
+               names_to = 'Attribute',
+               values_to = 'Attrib_value') %>% 
+  relocate(Attribute, .after = 3) -> long_data
+
+# graph object
+g <- graph_from_data_frame(long_data)
+
+# Long format all columns
+long_data2 <- IEC_data %>% 
+  mutate(across(everything(), as.character)) %>% 
+  pivot_longer(everything(), 
+               names_to = 'Attribute',
+               values_to = 'Attrib_value') %>% 
+  distinct()
+
+# Re-order using joins
+V(g)$att_type <- V(g)$name %>% 
+  as.data.frame() %>% 
+  set_names('name') %>% 
+  inner_join(long_data2, by = c("name" = "Attrib_value")) %>% 
+  pull(Attribute)
+
+V(g)$color <- c('steel blue', 'orange')[1 + (V(g)$att_type == 'IE_code')]
+
+V(g)$shape <- c("square", "circle")[(V(g)$att_type == 'IE_code')+1]
+
+```
+
+Plot the object
+```{r echo=FALSE,fig.align='center', fig.width=7, fig.cap="Network Diagram of Duplicate Importers Exporters detected through network analysis"}
+visIgraph(g)
+```
+
+Features of R used -
+
++ Power of interactive visualisations
++ Tidy data concepts laid down by Hadley Wickham, widely used across many programming languages such as pandas in python, tableau, etc.
++ Functional programming aspects of `dplyr::across` which is a powerful function to perform large number of analysis in one single line of code.  E.g. all columns mutated as character type using singe command.
++ Network Analysis, otherwise not possible in many licensed softwares such as Tableau and Power BI, without knowledge of R/Python.
+
+## Sentiment Analysis through Word Cloud
+
+```{r}
+dat <- read.table('budget.txt', header = FALSE, fill = TRUE)
+
+# reshape the .txt data frame into one column
+tidy_dat <- tidyr::gather(dat, key, word) %>% select(word)
+
+# tokenize
+tokens <- tidy_dat %>% 
+  unnest_tokens(word, word) %>% 
+  count(word, sort = TRUE) %>% 
+  ungroup()
+
+data("stop_words")
+
+tokens_clean <- tokens %>%
+  anti_join(stop_words)
+
+# remove numbers
+nums <- tokens_clean %>% filter(str_detect(word, "^[0-9]")) %>% select(word) %>% unique()
+
+tokens_clean <- tokens_clean %>% 
+  anti_join(nums, by = "word")
+
+# remove unique stop words that snuck in there
+uni_sw <- data.frame(word = c("cent", 
+                              "pm", 
+                              "crore", 
+                              "lakh",
+                              "set",
+                              "level",
+                              "sir"))
+
+tokens_clean <- tokens_clean %>% 
+  anti_join(uni_sw, by = "word")
+
+pal <- brewer.pal(8,"Dark2")
+
+# plot the 50 most common words
+tokens_clean %>% 
+  with(wordcloud(word, n, 
+                 random.order = FALSE, 
+                 max.words = 75, 
+                 colors=pal,
+                 scale=c(2.5, .5)))
+```
+
+
+## Customisation and Interactivity available in R visualisation
