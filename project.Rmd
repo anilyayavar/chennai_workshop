@@ -22,6 +22,10 @@ library(networkD3)
 library(visNetwork)
 library(tidytext) #install.packages("tidytext")
 library(wordcloud) #install.packages("wordcloud")
+library(ggtext)
+library(ggalt)
+library(ggthemes)
+library(ggpubr)
 ```
 
 
@@ -151,3 +155,46 @@ tokens_clean %>%
 
 
 ## Customisation and Interactivity available in R visualisation
+
+```{r out.width="100%"}
+olympics <- read_csv("athlete_events.csv")
+NOC_dat <- read_csv('noc_regions.csv')
+NOC_dat <- NOC_dat[,-3]
+
+olymp4 <- olympics %>%
+  filter(!is.na(Medal)) %>%
+  left_join(NOC_dat, by = 'NOC') %>%
+  group_by(region, Season, Medal) %>%
+  summarise(count = n_distinct(Event), .groups = 'drop') %>%
+  group_by(region, Season) %>%
+  mutate(tot = sum(count)) %>%
+  group_by(Season) %>%
+  slice_max(tot, n = 45) %>%
+  ungroup() %>%
+  mutate(Medal = factor(Medal, levels = c('Bronze', 'Silver', 'Gold'), ordered = TRUE),
+         region = reorder_within(region, count, Season))
+
+olymp4 %>%
+      filter(Season == 'Summer') %>%
+      mutate(l_1 = paste0(gsub('___.*$', '', region), ' ',
+                          '<img src = senojflags/', 
+                        gsub('___.*$', '', region), '-Flag.png height = "20" />' 
+                        )) -> olymp4_r2
+    
+    olymp4_r2 %>%  
+      ggplot(aes(x = region, y = count, fill = Medal, label = count)) +
+      geom_col(position = 'stack') +
+      geom_text(size = 4, position = position_stack(vjust = 0.5)) +
+      scale_fill_manual(values=c("#cd7f32","gray70","#c9b037")) +
+      scale_x_discrete(labels = rev(unique(olymp4_r2$l_1))) +
+      coord_flip() +
+      theme(legend.position = 'top',
+            axis.text.y = element_markdown(size = 17)) +
+      labs(y = 'Medals', fill = '', x = '', 
+           title = "Top-10 Countries by Medals won",
+           subtitle = "120 years of Summer Olympics")+
+      theme(plot.background = element_rect(color = "black", size = 1.5))
+```
+
+
+
