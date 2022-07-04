@@ -2,17 +2,17 @@
 title: "Power of R"
 author: "Team CDMA"
 date: '2022-06-30'
-output: html_document
+output: powerpoint_presentation
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
-Demonstrated through three data analytics projects
+## Demonstrated through three data analytics projects
 
-### Load Libraries
-```{r message=FALSE, warning=FALSE}
+Load Libraries
+```{r message=FALSE, warning=FALSE, echo=TRUE}
 library(tidyverse)
 library(knitr)
 library(igraph)
@@ -26,43 +26,52 @@ library(ggthemes)
 library(ggpubr)
 ```
 
-## Sentiment Analysis through Word Cloud
+## 1.Sentiment Analysis through Word Cloud
 
 Data Source: [Indian Budget Portal](https://www.indiabudget.gov.in/)
 
-```{r}
+Load data
+```{r warning=FALSE,message=FALSE}
 dat <- read.table('budget.txt', header = FALSE, fill = TRUE)
+```
 
-# reshape the .txt data frame into one column
+reshape the .txt data frame into one column
+```{r echo=TRUE}
 tidy_dat <- dat %>% 
   pivot_longer(everything(), values_to = 'word', names_to = NULL)
-
-# tokenize
+```
+Tokenize
+```{r echo=TRUE}
 tokens <- tidy_dat %>% 
   unnest_tokens(word, word) %>% 
   count(word, sort = TRUE) 
-
+```
+##
+Load default stop words
+```{r echo=TRUE}
 data("stop_words")
+```
 
-# Remove stop words using dplyr::anti_join
+Remove stop words using dplyr::anti_join
+```{r echo=TRUE}
 tokens_clean <- tokens %>%
   anti_join(stop_words, by='word') %>% 
   # remove numbers
   filter(!str_detect(word, "^[0-9]"))
-
-# remove additional words seen in first round
-uni_sw <- data.frame(word = c("cent", 
-                              "pm", 
-                              "crore", 
-                              "lakh",
-                              "set",
-                              "level",
-                              "sir"))
+```
+Remove additional words seen in first round
+```{r echo=TRUE}
+uni_sw <- data.frame(word = c("cent", "pm", "crore", 
+                              "lakh", "set",
+                              "level", "sir"))
 
 tokens_clean <- tokens_clean %>% 
   anti_join(uni_sw, by = "word")
+```
+##
+Plot
 
-# set pallete
+```{r message=FALSE, warning=FALSE}
 pal <- RColorBrewer::brewer.pal(8,"Dark2")
 
 # plot the 50 most common words
@@ -75,12 +84,14 @@ tokens_clean %>%
                  scale=c(2.5, .5)))
 ```
 
-## Customisation available in R visualisation
+## 2.Customisation available in R visualisation
 
 Customisation at micro level, e.g. adding icons, country flags, etc. in Axes of Plots generated.
 
 Data Set used- 120 Years of Olympics
 Source: [Kaggle](https://www.kaggle.com/datasets/heesoo37/120-years-of-olympic-history-athletes-and-results)
+
+## Output plot
 
 ```{r message=FALSE, warning=FALSE}
 olympics <- read_csv("athlete_events.csv")
@@ -133,6 +144,7 @@ Data Set - Export Schemes data sample
 
 A beneficiary is entitled to get only one Import/Export Code.  However network analysis revealed that a single beneficiary was enrolled using different attributes such as mobile number, email, PAN, bank account number, etc. and obtained multiple IECs.
 
+Data points analysed
 
 - Unique IE Code
 - Other Identification attributes, such as
@@ -140,7 +152,8 @@ A beneficiary is entitled to get only one Import/Export Code.  However network a
   + E-mail
   + PAN Number
   
-  
+## 
+
 Code Explanation: Steps-
 
 1. Load data.  
@@ -150,16 +163,16 @@ Code Explanation: Steps-
 5. Plot interactive plot using `visNetwork` library.
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 IEC_data <- read_csv('sample_data.csv')
 ```
 
-Preview the data
+## Preview the data
 ```{r}
 knitr::kable(IEC_data)
 ```
 
-Performing network analysis
+## Performing network analysis
 
 ```{r}
 #Change in long format
@@ -194,12 +207,11 @@ V(g)$shape <- c("square", "circle")[(V(g)$att_type == 'IE_code')+1]
 
 ```
 
-Plot the object
-```{r echo=FALSE,fig.align='center', fig.width=7, fig.cap="Network Diagram of Duplicate Importers Exporters detected through network analysis"}
-visIgraph(g)
+```{r graplot, fig.show='hold'}
+plot(g)
 ```
 
-Network output-
+
 ```{r}
 output <- g %>% 
   components() %>% 
@@ -214,7 +226,7 @@ knitr::kable(output)
 ```
 
 
-Features of R used -
+## Features of R used -
 
 + Level of customisation available
 + Better readable and concise code
